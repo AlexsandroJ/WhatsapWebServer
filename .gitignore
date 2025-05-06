@@ -1,0 +1,4 @@
+node_modules/
+LocalAuth_salves/
+.env
+.wwebjs_cache
