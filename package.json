@@ -15,22 +15,12 @@
   "type": "commonjs",
   "dependencies": {
     "axios": "^1.8.3",
-    "bcryptjs": "^3.0.2",
-    "body-parser": "^2.2.0",
-    "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "joi": "^17.13.3",
-    "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.13.1",
-    "nanoid": "^5.1.5",
+    "mongoose": "^8.14.2",
     "node-geocoder": "^4.4.1",
     "qrcode": "^1.5.4",
     "qrcode-terminal": "^0.12.0",
-    "querystring": "^0.2.1",
-    "starkbank": "^2.31.0",
-    "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1",
     "whatsapp-web.js": "^1.26.0"
   },
   "devDependencies": {
