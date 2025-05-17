@@ -55,12 +55,6 @@ const dell_confirmation = `❌\tPedidos Exluido\n${end_atendiment}`;
 const get_the_name = `✏️ ​Informe o nome do Cliente`;
 const text_tab = `\n`;
 
-const cidadesDePE = {
-    "Recife": ["Santo Amaro", "Boa Vista", "Cidade Universitária", "Pina", "Cajueiro Seco"],
-    "Jaboatão dos Guararapes": ["Cajueiro Seco", "Prazeres", "Guararapes", "Candeias", "Barro", "Piedade"],
-};
-
-const userId = '6810e8fde1c0d0c4f29a3431';
 function validateOptionMenu(msg) {
     return !["A", "a", "B", "b", "O", "o", "X", "x"].includes(msg.body);
 }
@@ -146,51 +140,37 @@ async function exit(msg) {
         }
     }
 }
+
 const menuSteps = [
     //  estados
     {// 0-cadastro
         key: "cadastro",
-        dataAux: ["Recife", "Jaboatão dos Guararapes", "Olinda", "Cabo"],
+        dataAux: [],
         validate: function (msg) {
             return validateOptionNum(msg, this.dataAux);
         },
         getData: async function (msg) {
-            /*
-            try {
-                // Tenta buscar os dados no banco de dados
-                const res = await ClientZap.findOne({ phone: msg.from });
-                this.dataAux = res.orders
-                // Verifica se os dados foram encontrados
-                if (!this.data) {
-                    throw new Error("Nenhum dado encontrado para o número: " + msg.from);
-                }
-            } catch (error) {
-                // Trata o erro localmente
-                console.error("Erro função getData city", error.message);
-                // Define um valor padrão para 'data' em caso de erro
-                this.dataAux = ["Recife", "Jaboatão dos Guararapes", "Olinda", "Cabo"];
-            }*/
+
         },
         msgOption: async function (msg) {
             // Criação de dados
+            await getData(msg);
             try {
-                //const newUser = await ClientZap({ phone: msg.from });
-                //await newUser.save();
-                const newUser = await axios.post(`${uri}/api/client/`, { 
-                    phone: msg.from 
+
+                const newUser = await axios.post(`${uri}/api/client/`, {
+                    phone: msg.from
                 })
                 console.log(`Novo Cliente: ${newUser.data.phone}`);
-                // msg inicial
-                data = `Selecione Sua Cidade:\n\n`;
-                x = 0;
-                this.dataAux.forEach(element => {
-                    data += `${x + 1} 👉​${element}\n`;
-                    x++
+                msgAux = `✅\tSelecione Sua Cidade:\n\n`;
+
+                this.dataAux.forEach((element, index) => {
+                    msgAux += `${index + 1} 👉 ${element.name}\n`;
                 });
-                msgAux = msgInitial + `${data}`;
+                msgAux = msgInitial + `${msgAux}`;
                 return msgAux;
+
             } catch (error) {
-                console.error('runDynamicMenu msgOption cadastro erro:', error);
+                console.error('runDynamicMenu msgOption cadastro erro:');
                 process.exit(1);
             }
         },
@@ -202,41 +182,29 @@ const menuSteps = [
     },
     {// 1-city
         key: "city",
-        dataAux: ["Recife", "Jaboatão dos Guararapes", "Olinda", "Cabo"],
+        dataAux: [],
         validate: function (msg) {
             return validateOptionNum(msg, this.dataAux);
         },
-        getData: async function (msg) {
-            /*
-            try {
-                // Tenta buscar os dados no banco de dados
-                const res = await ClientZap.findOne({ phone: msg.from });
-                this.dataAux = res.orders
-                // Verifica se os dados foram encontrados
-                if (!this.data) {
-                    throw new Error("Nenhum dado encontrado para o número: " + msg.from);
-                }
-            } catch (error) {
-                // Trata o erro localmente
-                console.error("Erro função getData city", error.message);
-                // Define um valor padrão para 'data' em caso de erro
-                this.dataAux = ["Recife", "Jaboatão dos Guararapes", "Olinda", "Cabo"];
-            }*/
-        },
-        msgOption: function (msg) {
+        getData: async function (msg) { },
+        msgOption: async function (msg) {
+
             msgAux = `✅\tSelecione Sua Cidade:\n\n`;
             this.dataAux.forEach((element, index) => {
-                msgAux += `${index + 1} 👉 ${element}\n`;
+                msgAux += `${index + 1} 👉 ${element.name}\n`;
             });
             return msgAux;
         },
         msgConfirmation: async function (msg) {
             const index = parseInt(msg.body) - 1;
             const select = this.dataAux[index];
-            await axios.put(`${uri}/api/client/${msg.from}`, { 
-                city: select
+
+            await axios.put(`${uri}/api/client/${msg.from}`, {
+                city: select.name
             });
-            return msgAux = `✅\tCidade:\n\t${select}\n\n${menuOptions}​`;
+
+            return msgAux = `✅\tCidade:\n\t${select.name}\n\n${menuOptions}​`;
+
         },
         volver: async function (msg) { return await volver(msg) },
         next: async function (msg) { await next(msg) },
@@ -247,41 +215,39 @@ const menuSteps = [
     },
     {// 2-bairro
         key: "bairro",
-        dataAux: ["Cajueiro Seco", "Prazeres", "Guararapes", "Candeias", "Barro", "Piedade"],
+        dataAux: [],
         validate: function (msg) {
-            return validateOptionNum(msg, this.dataAux);
+            return (validateOptionNum(msg, this.dataAux) || validateOptionMenu(msg));
         },
-        getData: async function (msg) {
-            /*
-            try {
-                // Tenta buscar os dados no banco de dados
-                const res = await ClientZap.findOne({ phone: msg.from });
-                this.dataAux = res.orders
-                // Verifica se os dados foram encontrados
-                if (!this.data) {
-                    throw new Error("Nenhum dado encontrado para o número: " + msg.from);
-                }
-            } catch (error) {
-                // Trata o erro localmente
-                console.error("Erro função getData city", error.message);
-                // Define um valor padrão para 'data' em caso de erro
-                this.dataAux = ["Recife", "Jaboatão dos Guararapes", "Olinda", "Cabo"];
-            }*/
-        },
-        msgOption: function (msg) {
-            msgAux = `✅\tSelecione Seu Bairro:\n\n`;
+        getData: async function (msg) { },
+        msgOption: async function (msg) {
+            const result = await axios.get(`${uri}/api/client/${msg.from}`);
+            let neighborhoods;
+            //console.log("City: ", result.data.city)
+
             this.dataAux.forEach((element, index) => {
-                msgAux += `${index + 1} 👉 ${element}\n`;
+                //console.log(element.name);
+                if (element.name == result.data.city) {
+                    neighborhoods = element.neighborhoods;
+                    //console.log(element.neighborhoods);
+                }
             });
+            this.dataAux = neighborhoods;
+            msgAux = `✅\tSelecione Seu Bairro:\n\n`;
+
+            this.dataAux.forEach((element, index) => {
+                msgAux += `${index + 1} 👉 ${element.name}\n`;
+            });
+
             return msgAux;
         },
         msgConfirmation: async function (msg) {
             const index = parseInt(msg.body) - 1;
             const select = this.dataAux[index];
-            await axios.put(`${uri}/api/client/${msg.from}`, { 
-                bairro: select 
+            await axios.put(`${uri}/api/client/${msg.from}`, {
+                bairro: select.name
             });
-            return msgAux = `✅\tCidade:\n\t${select}\n\n${menuOptions}​`;
+            return msgAux = `✅\tCidade:\n\t${select.name}\n\n${menuOptions}​`;
         },
         volver: async function (msg) { await volver(msg) },
         next: async function (msg) { await next(msg) },
@@ -302,8 +268,8 @@ const menuSteps = [
             return msgAux;
         },
         msgConfirmation: async function (msg) {
-            await axios.put(`${uri}/api/client/${msg.from}`, { 
-                num: msg.body 
+            await axios.put(`${uri}/api/client/${msg.from}`, {
+                num: msg.body
             });
             return msgAux = `✅\tNumero:\n\t${msg.body}\n\n${menuOptions}​`;
         },
@@ -323,7 +289,7 @@ const menuSteps = [
             const result = await axios.put(`${uri}/api/client/${msg.from}`, {
                 name: msg.body,
             });
-            
+
             if (result) this.dataAux = result.data;
         },
         msgOption: function (msg) {
@@ -381,21 +347,12 @@ const menuSteps = [
             }
         },
         getData: async function (msg) {
-            let productsList = [];
-            x = 1;
-            msgAux = msg_inicial_cardapio;            
-            const response = await axios.get(`${uri}/api/category/${userId}`);
-            response.data.categories.forEach(element => {
-                msgAux += `\n\t${element.category}\n\n`;
-                element.items.forEach((item) => {
-                    productsList.push(item);
-                    msgAux += `${x} 👉​${item.name}\n👇\nR$ ${item.price}\n\n`
-                    x++;
-                });
+            msgAux = msg_inicial_cardapio;
+            this.dataAux.productsList.forEach((item, index) => {
+                msgAux += `${index + 1} 👉​${item.name}\n👇\nR$ ${item.price}\n\n`
             });
             msgAux += msg_fim_cardapio;
             const orders = msgAux;
-            this.dataAux.productsList = productsList;
             this.dataAux.orders = orders;
         },
         msgOption: async function (msg) {
@@ -467,11 +424,9 @@ const menuSteps = [
             if (this.dataAux.orders.length > 0) {
                 data = text_tab;
                 total = 0;
-                x = 1;
-                this.dataAux.orders.forEach(element => {
+                this.dataAux.orders.forEach((element, index) => {
                     total += element.price;
-                    data += `${x} 👉​${element.name}\n👇\nR$ ${element.price}\n\n`;
-                    x++;
+                    data += `${index + 1} 👉​${element.name}\n👇\nR$ ${element.price}\n\n`;
                 });
                 msgAux = `✅\tPedidos Confirmados
                 \n${data}
@@ -543,7 +498,7 @@ const menuSteps = [
             await axios.put(`${uri}/api/client/${msg.from}`, {
                 money: pags[index],
             });
-            
+
             msgAux = `✅\tPedidos 
                         \n${data}
                         \nFrete:\tR$ ${this.dataAux.frete.toFixed(precision)}
@@ -605,28 +560,36 @@ const menuSteps = [
                         \nAvisaremos quando o pedido sair pra entrega 🛵
                         \n
                         \n\t\t${end_atendiment}​`
-            // inserir em outra collection
-            //await collection_orders.insertOne(result);
-            //const newDocument = new ClientPedidos();
-
-            // Copiar cada campo individualmente
-            /*
-            newDocument.etapa = this.dataAux.etapa;
-            newDocument.phone = this.dataAux.phone;
-            newDocument.name = this.dataAux.name;
-            newDocument.city = this.dataAux.city;
-            newDocument.address = this.dataAux.address;
-            newDocument.bairro = this.dataAux.bairro;
-            newDocument.num = this.dataAux.num;
-            newDocument.rua = this.dataAux.rua;
-            newDocument.frete = this.dataAux.frete;
-            newDocument.orders = this.dataAux.orders;
-            newDocument.money = this.dataAux.money;
-            */
-            // Salvar o novo documento na coleção de destino
-            //await newDocument.save();
+            
 
             //await ClientZap.deleteOne({ phone: msg.from });
+
+            await axios.post(`${uri}/api/ordens`,
+                {
+                    etapa: this.dataAux.etapa,
+                    phone: this.dataAux.phone,
+                    name: this.dataAux.name,
+                    city: this.dataAux.city,
+                    address: this.dataAux.address,
+                    bairro: this.dataAux.bairro,
+                    num: this.dataAux.num,
+                    rua: this.dataAux.rua,
+                    frete: this.dataAux.frete,
+                    orders: this.dataAux.orders,
+                    money: this.dataAux.money,
+                },
+                { // Configurações (headers, etc)
+                    headers: {
+                        Authorization: `Bearer ${msg.token}`
+                    }
+                }).
+                then(res => {
+                    //console.log("Ordens Confirmadas")
+                })
+                .catch(err => {
+                    console.error('getData: Ordens Confirmadas Erro na requisição:', err.response?.data || err.message);
+                });
+
             return msgAux
         },
         msgConfirmation: async function (msg) { },
@@ -637,45 +600,81 @@ const menuSteps = [
         msgOptionInval: function () { return option_inval },
     },
 ];
+
+async function getData(msg) {
+    await axios.get(`${uri}/api/cities/${msg.userId}`, // URL
+        { // Configurações (headers, etc)
+            headers: {
+                Authorization: `Bearer ${msg.token}`
+            }
+        }).
+        then(res => {
+            res.data.cities.forEach(citys => {
+                menuSteps[0].dataAux.push(citys);
+                menuSteps[1].dataAux.push(citys);
+                menuSteps[2].dataAux.push(citys);
+            });
+        })
+        .catch(err => {
+            console.error('getData: /api/cities/ Erro na requisição:', err.response?.data || err.message);
+        });
+
+    await axios.get(`${uri}/api/category/${msg.userId}`).
+        then(res => {
+            res.data.categories.forEach(element => {
+                element.items.forEach((item) => {
+
+                    if (item.available) {
+                        menuSteps[6].dataAux.productsList.push(item);
+                    }
+                });
+            });
+            //console.log("get data:",menuSteps[6].dataAux.productsList);
+        })
+        .catch(err => {
+            console.error('getData: /api/category/ Erro na requisição:', err.response?.data || err.message);
+        });
+}
 // Função principal para executar o menu dinâmico
 async function runDynamicMenu(msg) {
     try {
         // buscar dados de cliente
         try {
-            const result = await axios.get(`${uri}/api/client/${msg.from}`);
-            if (result.status === 200) {
-                if (menuSteps[result.data.etapa].validate(msg)) {
+            const clientResult = await axios.get(`${uri}/api/client/${msg.from}`);
+            if (clientResult.status === 200) {
+                if (menuSteps[clientResult.data.etapa].validate(msg)) {
                     // Verificação se entrada é válida para confimação
-                    return await menuSteps[result.data.etapa].msgConfirmation(msg);
+
+                    return await menuSteps[clientResult.data.etapa].msgConfirmation(msg);
                 } else if (msg.body === "B" || msg.body === "b") {
                     // msg de opções da etapa anterior
-                    if ((result.data.etapa - 1) > 0) {
+                    if ((clientResult.data.etapa - 1) > 0) {
                         // voltar
-                        await menuSteps[result.data.etapa].volver(msg);
-                        return await menuSteps[result.data.etapa - 1].msgOption(msg);
+                        await menuSteps[clientResult.data.etapa].volver(msg);
+                        return await menuSteps[clientResult.data.etapa - 1].msgOption(msg);
                     } else {
-                        return await menuSteps[result.data.etapa].msgOption(msg);
+                        return await menuSteps[clientResult.data.etapa].msgOption(msg);
                     }
                 } else if (msg.body === "A" || msg.body === "a") {
                     // Incrementa etapa
-                    await menuSteps[result.data.etapa].next(msg);
+                    await menuSteps[clientResult.data.etapa].next(msg);
                     // msg de opções da proxima etapa
-                    if (result.data.etapa < 6 || result.data.orders.length > 0) {
-                        return await menuSteps[result.data.etapa + 1].msgOption(msg);
+                    if (clientResult.data.etapa < 6 || clientResult.data.orders.length > 0) {
+                        return await menuSteps[clientResult.data.etapa + 1].msgOption(msg);
                     } else {
                         return msg_orders_void;
                     }
                 } else if (msg.body === "O" || msg.body === "o") {
                     // Edição
-                    return await menuSteps[result.data.etapa].edit(msg);
+                    return await menuSteps[clientResult.data.etapa].edit(msg);
                 } else if (msg.body === "X" || msg.body === "x") {
                     // Sair
-                    return await menuSteps[result.data.etapa].exit(msg);
+                    return await menuSteps[clientResult.data.etapa].exit(msg);
                 } else {
                     // Opção Invalida
                     return option_inval;
                 }
-            } 
+            }
         } catch (error) {
             // Tratamento de erros
             if (error.response) {
@@ -683,24 +682,25 @@ async function runDynamicMenu(msg) {
                 const { status, data } = error.response;
                 if (status === 404) {
                     // Cadastro de cliente
+                    console.log(data);
                     return await menuSteps[0].msgOption(msg);
                 } else if (status === 500) {
-                    return "Erro interno no servidor da API";
+                    return "runDynamicMenu: Erro interno no servidor da API";
                 } else {
-                    return `Erro desconhecido na API (Status: ${status})`;
+                    return `runDynamicMenu: Erro desconhecido na API (Status: ${status})`;
                 }
             } else if (error.request) {
                 // A requisição foi feita, mas não houve resposta do servidor
-                console.error("Nenhuma resposta recebida do servidor:", error.request);
-                return "Falha ao conectar com o servidor da API";
+                console.error("runDynamicMenu: Nenhuma resposta recebida do servidor:", error.request);
+                return "runDynamicMenu: Falha ao conectar com o servidor da API";
             } else {
                 // Outros erros (ex.: problemas de configuração)
-                console.error("Erro ao fazer a requisição:", error.message);
-                return "Erro ao acessar a API";
+                console.error("runDynamicMenu: Erro ao fazer a requisição:", error.message);
+                return "runDynamicMenu: Erro ao acessar a API";
             }
         }
     } catch (error) {
-        console.error('runDynamicMenu erro:', error);
+        console.error('runDynamicMenu: Erro:', error);
         process.exit(1);
     }
 }
