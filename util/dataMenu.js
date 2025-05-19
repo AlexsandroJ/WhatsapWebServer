@@ -155,6 +155,7 @@ const menuSteps = [
         msgOption: async function (msg) {
             // Criação de dados
             await getData(msg);
+            console.log("getdata")
             try {
 
                 const newUser = await axios.post(`${uri}/api/client/`, {

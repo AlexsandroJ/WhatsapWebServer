@@ -2,17 +2,81 @@ const { Client, LocalAuth } = require("whatsapp-web.js");
 const axios = require('axios');
 const QRCode = require('qrcode');
 const qrcode = require("qrcode-terminal");
-const fs = require('fs');
-const path = require('path');
-const FormData = require('form-data');
 
 const dataMenu = require('./util/dataMenu');
 
 const uri = `${process.env.API_URL}:${process.env.PORT}`;
+const socketServerUrl = uri; // Endereço do servidor WebSocket
+
+const { io } = require('socket.io-client'); // ✅ Importa o socket.io-client
 
 let client = null;
 let token;
 let userId;
+let qrImage;
+let conectado = false;
+let botState = false;
+
+// ✅ Conecta ao servidor WebSocket
+const socket = io(socketServerUrl, {
+    reconnection: true,
+    reconnectionAttempts: Infinity,
+    randomizationFactor: 0.5
+});
+
+// Escuta eventos do servidor WebSocket
+socket.on('connect', () => {
+    console.log('🔌 Conectado ao servidor WebSocket');
+});
+
+socket.on('disconnect', (reason) => {
+    console.log('🔌 Desconectado do servidor:', reason);
+});
+
+// ✅ Exemplo: quando o servidor emitir "atualizacao", execute algo
+socket.on('atualizacao', async (data) => {
+    //console.log('📥 Atualização WebSocket:');
+    /*
+    if (data.type === 'login') {
+        console.log('🔐 Login solicitado via WebSocket');
+        console.log('🔐 :', data.token);
+        token = data.token;
+        //await loginNoSistema(data.credentials || {});
+    }
+    */
+    if (data.type === 'getStates') {
+        console.log('💬​ Comando getStates:');
+        socket.emit('atualizacao', {
+            type: 'conected',
+            conectado: conectado,
+            
+            botState: botState
+        });
+    }
+    if (data.type === 'botState') {
+        console.log('🤖 Comando WebSocket:');
+        botState = data.botState;
+        token = data.token;
+        userId = data.userId;
+
+        if (botState) {
+            console.log('Bot: ✔️');
+        } else {
+            console.log('Bot: ​❌ ');
+        }
+    }
+
+    if (data.type === 'logout') {
+        console.log('🚪 Logout solicitado via WebSocket');
+        if (client) {
+            await client.logout();
+            await client.destroy();
+        }
+    }
+
+});
+
+
 // Função para reiniciar o cliente
 async function startClient() {
     if (client) {
@@ -27,7 +91,6 @@ async function startClient() {
             console.warn('Cliente já foi destruído:', err.message);
         }
     }
-
     // Criar novo cliente
     client = new Client({
         puppeteer: {
@@ -40,29 +103,27 @@ async function startClient() {
     });
 
     // Eventos
-    await client.on("qr", async (qr) => {
+    client.on("qr", async (qr) => {
         try {
-            // Gera o QR Code como Buffer (binário)
-            const qrImage = await QRCode.toBuffer(qr, {
+            qrImage = await QRCode.toBuffer(qr, {
                 type: 'png',
                 width: 300,
                 margin: 2,
-                color: { dark: '#000000FF' }, // Cor preta
-                background: { light: '#FFFFFFFF' } // Fundo branco
+                color: { dark: '#000000FF' },
+                background: { light: '#FFFFFFFF' }
             });
 
-            // Caminho completo com nome do arquivo
-            const filePath = path.join('./', 'whatsapp-qr.png');
-
-            // Salva o arquivo no sistema
-            fs.writeFileSync(filePath, qrImage);
-            console.log(`QR Code salvo em: ${filePath}`);
-
-            // Envia via API (se quiser)
-            await sendQrCode(qr);
-
+            socket.emit('atualizacao', {
+                type: 'conected',
+                conectado: false,
+                imageData: qrImage.toString('base64'),
+                botState: botState
+            });
+            conectado = false;
             // Mostra no terminal
-            qrcode.generate(qr, { small: true });
+            //qrcode.generate(qr, { small: true });
+
+            console.log('✅ QrCode via WebSocket:');
 
         } catch (error) {
             console.error("Erro ao gerar ou salvar QR Code:", error.message);
@@ -71,27 +132,51 @@ async function startClient() {
 
     client.on("authenticated", () => {
         console.log("AUTHENTICATED");
+
     });
 
     client.on("auth_failure", (msg) => {
         console.error("AUTHENTICATION FAILURE", msg);
+        socket.emit('atualizacao', {
+            type: 'conected',
+            conectado: false,
+            imageData: qrImage.toString('base64'),
+            botState: botState
+        });
+        conectado = false;
         restartClient();
     });
 
     client.on("ready", async () => {
-        console.log("CLIENTE PRONTO");
+        console.log("CLIENTE CONECTADO");
         console.log("USER:", client.info.wid.user);
+        socket.emit('atualizacao', {
+            type: 'conected',
+            conectado: true,
+            botState: botState
+        });
+        conectado = true;
     });
 
     client.on("disconnected", (reason) => {
         console.log("CLIENTE DESCONECTADO:", reason);
+        socket.emit('atualizacao', {
+            type: 'conected',
+            conectado: false,
+            imageData: qrImage.toString('base64'),
+            botState: botState
+        });
+        conectado = false;
         restartClient();
     });
 
     client.on("message", async (msg) => {
         msg.userId = userId;
         msg.token = token;
-        client.sendMessage(msg.from, await dataMenu(msg));
+        //console.log("token:",token);
+        if (botState) {
+            client.sendMessage(msg.from, await dataMenu(msg));
+        }
     });
 
     await client.initialize();
@@ -116,47 +201,7 @@ process.on('SIGINT', () => {
     process.exit(0);
 });
 
-// Função para enviar QR Code para API
-async function sendQrCode(qrCode) {
-    const email = 'alex@example.com';
-    const password = 'password321';
-    try {
-        const resLogin = await axios.post(`${uri}/api/sessions/login`, {
-            email,
-            password
-        });
 
-        token = resLogin.data.token;
-        userId = resLogin.data.userId;
-
-        const qrBuffer = await QRCode.toBuffer(qrCode, {
-            type: 'png',
-            width: 300,
-            margin: 2,
-            color: { dark: '#000000FF' },
-            background: { light: '#FFFFFFFF' }
-        });
-
-        const formData = new FormData();
-        formData.append('userId', userId);
-        formData.append('file', qrBuffer, {
-            filename: 'whatsapp-qr.png',
-            contentType: 'image/png'
-        });
-
-        await axios.post(`${uri}/api/subscriptions/qr`, formData, {
-            headers: {
-                ...formData.getHeaders(),
-                Authorization: `Bearer ${token}`
-            }
-        });
-
-        console.log('QR Code enviado para API');
-
-    } catch (error) {
-        console.error('Erro ao enviar QR Code:', error.message);
-    }
-}
 
 // Inicializa o cliente pela primeira vez
 startClient();
