@@ -12,6 +12,7 @@ const { io } = require('socket.io-client'); // Importa o socket.io-client
 let client = null;
 let token;
 let userId;
+let imageData = null;
 
 // flag de controle de reinicialização para evitar loops
 let reiniciando = false;
