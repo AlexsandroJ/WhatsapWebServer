@@ -5,7 +5,7 @@ const dataMenu = require('../util/dataMenu');
 
 require('dotenv').config();
 
-const uri = `${process.env.API_URL}:${process.env.PORT}`;
+const uri = `${process.env.API_URL}`;
 
 let phoneForTest = "55123456789";
 const email = 'alex@example.com';

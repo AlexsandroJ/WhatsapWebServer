@@ -5,8 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const dataMenu = require('./util/dataMenu');
 
-const uri = `${process.env.API_URL}:${process.env.PORT}`;
-const socketserverStateUrl = uri;
+const uri = `${process.env.API_URL}`;
 
 const { io } = require('socket.io-client'); // Importa o socket.io-client
 
@@ -33,7 +32,7 @@ let qrImage;
 let conectado = false;
 
 // Conecta ao servidor WebSocket
-const socket = io(socketserverStateUrl, {
+const socket = io(uri, {
     reconnection: true,
     reconnectionAttempts: Infinity,
     randomizationFactor: 0.5
@@ -268,7 +267,7 @@ process.on('SIGINT', () => {
 
 function sendStates() {
     if (!socket.connected) {
-        console.warn('🟡 Não foi possível enviar estados - socket desconectado');
+        console.warn('🟡 Não foi possível enviar estados - socket desconectado uri:',uri);
         return;
     }
     socket.emit('atualizacao', {

@@ -3,7 +3,7 @@ const dataTest = require('../util/productsTest');
 const calcFrete = require('../util/frete');
 require('dotenv').config();
 
-const uri = `${process.env.API_URL}:${process.env.PORT}`;
+const uri = `${process.env.API_URL}`;
 // ---------------------Const e var -------------------------------//
 const precision = 2;
 const cardapio = dataTest;
