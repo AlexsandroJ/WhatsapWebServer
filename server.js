@@ -4,6 +4,7 @@ const QRCode = require('qrcode');
 const fs = require("fs");
 const path = require("path");
 const dataMenu = require('./util/dataMenu');
+const AiAgent = require('./util/AiAgent');
 
 const uri = `${process.env.API_URL}`;
 
@@ -23,8 +24,11 @@ let serverState = false
 // flag do estado do client
 let clientState = false;
 
-// flag do do estatdo do bot
-let botState = false;
+// flag do estado do bot
+let botActiveState = false;
+
+// flag do estado bot com ia
+let botAIState = false;
 
 // dados do qrCode
 let qrImage;
@@ -82,14 +86,14 @@ socket.on('atualizacao', async (data) => {
         sendStates();
     }
 
-    if (data.type === 'setBotState') {
-        console.log('🤖 Comando setBotState:', data.botState ? 'ON' : 'OFF');
-        botState = data.botState;
+    if (data.type === 'setbotState') {
+        console.log('🤖 Comando botState:', data.botActiveState ? 'ON' : 'OFF', "Tipo do Bot:",data.botAIState ? 'IA' : 'MENU');
+        botActiveState = data.botActiveState;
+        botAIState = data.botAIState;
         token = data.token;
         userId = data.userId;
         sendStates();
     }
-
 });
 
 function temClienteSalvo(clientId = "client-Alex") {
@@ -216,9 +220,17 @@ async function startClient() {
             msg.userId = userId;
             msg.token = token;
 
-            if (botState && client && typeof client.sendMessage === 'function') {
+            if ( !botAIState && botActiveState && client && typeof client.sendMessage === 'function') {
                 try {
                     await client.sendMessage(msg.from, await dataMenu(msg));
+                } catch (err) {
+                    console.error('❌ Erro ao enviar resposta:', err.message);
+                }
+            }
+
+            if ( botAIState && botActiveState && client && typeof client.sendMessage === 'function') {
+                try {
+                    await client.sendMessage(msg.from, await AiAgent(msg));
                 } catch (err) {
                     console.error('❌ Erro ao enviar resposta:', err.message);
                 }
@@ -276,7 +288,8 @@ function sendStates() {
         serverState: serverState,
         clientState: clientState,
         conectado: conectado,
-        botState: botState,
+        botActiveState: botActiveState,
+        botAIState: botAIState,
         imageData: imageData
     });
 }

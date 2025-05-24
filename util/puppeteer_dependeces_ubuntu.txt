@@ -1,0 +1,1 @@
+apt install -y libnss3 libxss1 libasound2t64 libatk-bridge2.0-0t64 libgtk-3-0t64 libx11-xcb1 libxcomposite1 libxcursor1 libxdamage1 libxi-dev libxtst-dev  libcups2 libxrandr2 libatk1.0-0  libpangocairo-1.0-0  libgbm1 libnss3
