@@ -1,5 +1,5 @@
 // src/whatsapp/clientManager.js
-const { Client } = require("whatsapp-web.js");
+const { Client , LocalAuth} = require("whatsapp-web.js");
 const QRCode = require('qrcode');
 const qrcodeTerminal = require('qrcode-terminal');
 const states = require('../util/states');
@@ -39,7 +39,14 @@ async function startClient() {
     } else {
         console.log('✅ Criando novo cliente WhatsApp...');
         client = new Client({
-            authStrategy: new (require('whatsapp-web.js').LocalAuth)()
+            puppeteer: {
+                args: ['--no-sandbox', '--disable-setuid-sandbox'],
+            },
+
+            authStrategy: new LocalAuth({
+                dataPath: 'LocalAuth_salves',
+                clientId: "client-Alex"
+            })
         });
     }
 

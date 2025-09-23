@@ -611,6 +611,7 @@ async function getData(msg) {
         }).
         then(res => {
             res.data.cities.forEach(citys => {
+                // salvar em todas as etapas que precisam de cidades
                 menuSteps[0].dataAux.push(citys);
                 menuSteps[1].dataAux.push(citys);
                 menuSteps[2].dataAux.push(citys);
