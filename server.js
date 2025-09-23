@@ -11,8 +11,8 @@ const uri = `${process.env.API_URL}`;
 const { io } = require('socket.io-client'); // Importa o socket.io-client
 
 let client = null;
-let token;
-let userId;
+let token = process.env.TOKEN || "";
+let userId = process.env.USERID || "";
 let imageData = null;
 
 // flag de controle de reinicialização para evitar loops
@@ -44,9 +44,11 @@ const socket = io(uri, {
 });
 
 // Escuta eventos do servidor WebSocket
-socket.on('connect', () => {
+socket.on('connect', async () => {
     console.log('🔌 Conectado ao servidor WebSocket');
     serverState = true;
+    await startClient();
+    clientState = true;
     sendStates();
 });
 
@@ -60,6 +62,7 @@ socket.on('disconnect', (reason) => {
 // Recebe atualizações em tempo real
 socket.on('atualizacao', async (data) => {
 
+    /*
     if (data.type === 'system' && serverState) {
         if (data.comand === true) {
             console.log('▶️ Comando system: Ligar');
@@ -80,19 +83,19 @@ socket.on('atualizacao', async (data) => {
             sendStates();
         }
     }
+    */
+    if (data.userId == userId ) {
+        if (data.type === 'getStates') {
+            console.log('💬 Comando getStates:');
+            sendStates();
+        }
 
-    if (data.type === 'getStates') {
-        console.log('💬 Comando getStates:');
-        sendStates();
-    }
-
-    if (data.type === 'setbotState') {
-        console.log('🤖 Comando botState:', data.botActiveState ? 'ON' : 'OFF', "Tipo do Bot:",data.botAIState ? 'IA' : 'MENU');
-        botActiveState = data.botActiveState;
-        botAIState = data.botAIState;
-        token = data.token;
-        userId = data.userId;
-        sendStates();
+        if (data.type === 'setbotState') {
+            console.log('🤖 Comando botState:', data.botActiveState ? 'ON' : 'OFF', "Tipo do Bot:", data.botAIState ? 'IA' : 'MENU');
+            botActiveState = data.botActiveState;
+            botAIState = data.botAIState;
+            sendStates();
+        }
     }
 });
 
@@ -220,7 +223,7 @@ async function startClient() {
             msg.userId = userId;
             msg.token = token;
 
-            if ( !botAIState && botActiveState && client && typeof client.sendMessage === 'function') {
+            if (!botAIState && botActiveState && client && typeof client.sendMessage === 'function') {
                 try {
                     await client.sendMessage(msg.from, await dataMenu(msg));
                 } catch (err) {
@@ -228,7 +231,7 @@ async function startClient() {
                 }
             }
 
-            if ( botAIState && botActiveState && client && typeof client.sendMessage === 'function') {
+            if (botAIState && botActiveState && client && typeof client.sendMessage === 'function') {
                 try {
                     await client.sendMessage(msg.from, await AiAgent(msg));
                 } catch (err) {
@@ -280,11 +283,13 @@ process.on('SIGINT', () => {
 
 function sendStates() {
     if (!socket.connected) {
-        console.warn('🟡 Não foi possível enviar estados - socket desconectado uri:',uri);
+        console.warn('🟡 Não foi possível enviar estados - socket desconectado uri:', uri);
         return;
     }
     socket.emit('atualizacao', {
         type: 'conected',
+        token: token,
+        userId: userId,
         serverState: serverState,
         clientState: clientState,
         conectado: conectado,
