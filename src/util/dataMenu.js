@@ -77,15 +77,15 @@ async function volver(msg) {
             // O servidor respondeu com um status diferente de 2xx
             const { status, data } = error.response;
             console.error(`Erro na API: Status ${status}, Dados:`, data);
-            return `Erro ao atualizar etapa (Status: ${status})`;
+            return `volver: Erro ao atualizar etapa (Status: ${status})`;
         } else if (error.request) {
             // A requisição foi feita, mas não houve resposta do servidor
             console.error("Nenhuma resposta recebida do servidor:", error.request);
-            return "Falha ao conectar com o servidor da API";
+            return "volver: Falha ao conectar com o servidor da API";
         } else {
             // Outros erros (ex.: problemas de configuração)
             console.error("Erro ao fazer a requisição:", error.message);
-            return "Erro ao acessar a API";
+            return "volver: Erro ao acessar a API";
         }
     }
 }
@@ -121,14 +121,14 @@ function edit(msg) {
 }
 async function exit(msg) {
     try {
-        await axios.put(`${uri}/api/client/${msg.from}`, { etapa: 1 });
+        await axios.delete(`${uri}/api/client/${msg.from}`);
     } catch (error) {
         // Tratamento de erros
         if (error.response) {
             // O servidor respondeu com um status diferente de 2xx
             const { status, data } = error.response;
             console.error(`Erro na API: Status ${status}, Dados:`, data);
-            return `Erro ao atualizar etapa (Status: ${status})`;
+            return `Erro ao excluir etapa (Status: ${status})`;
         } else if (error.request) {
             // A requisição foi feita, mas não houve resposta do servidor
             console.error("Nenhuma resposta recebida do servidor:", error.request);
@@ -153,27 +153,37 @@ const menuSteps = [
 
         },
         msgOption: async function (msg) {
-            // Criação de dados
+            // buscar dados
             await getData(msg);
-            console.log("getdata")
+            // 1. Tenta buscar o cliente
+            let client;
             try {
-
-                const newUser = await axios.post(`${uri}/api/client/`, {
-                    phone: msg.from
-                })
-                console.log(`Novo Cliente: ${newUser.data.phone}`);
-                msgAux = `✅\tSelecione Sua Cidade:\n\n`;
-
-                this.dataAux.forEach((element, index) => {
-                    msgAux += `${index + 1} 👉 ${element.name}\n`;
-                });
-                msgAux = msgInitial + `${msgAux}`;
-                return msgAux;
-
+                const response = await axios.get(`${uri}/api/client/${msg.from}`);
+                client = response.data;
+                console.log(`Cliente já existe: ${client.phone}`);
             } catch (error) {
-                console.error('runDynamicMenu msgOption cadastro erro:');
-                process.exit(1);
+                // Se for 404, significa que NÃO existe → vamos cadastrar
+                if (error.response?.status === 404) {
+                    //console.log(`Cliente não encontrado. Cadastrando...`);
+                    const createResponse = await axios.post(`${uri}/api/client/`, {
+                        phone: msg.from
+                    });
+                    client = createResponse.data;
+                    console.log(`Novo cliente cadastrado: ${client.phone}`);
+                } else {
+                    // Outro erro (500, timeout, etc.)
+                    throw error; // relança para o catch externo
+                }
             }
+            msgAux = `✅\tSelecione Sua Cidade:\n\n`;
+
+            this.dataAux.forEach((element, index) => {
+                msgAux += `${index + 1} 👉 ${element.name}\n`;
+            });
+            msgAux = msgInitial + `${msgAux}`;
+            return msgAux;
+
+
         },
         volver: async function (msg) { return option_inval },
         next: async function (msg) { await next(msg) },
@@ -207,7 +217,7 @@ const menuSteps = [
             return msgAux = `✅\tCidade:\n\t${select.name}\n\n${menuOptions}​`;
 
         },
-        volver: async function (msg) { return await volver(msg) },
+        volver: async function (msg) { return await option_inval },
         next: async function (msg) { await next(msg) },
         edit: async function (msg) { return this.msgOption(msg) },
         exit: async function (msg) { return option_inval },
@@ -217,13 +227,14 @@ const menuSteps = [
     {// 2-bairro
         key: "bairro",
         dataAux: [],
+        neighborhoods: [],
         validate: function (msg) {
             return (validateOptionNum(msg, this.dataAux) || validateOptionMenu(msg));
         },
         getData: async function (msg) { },
         msgOption: async function (msg) {
             const result = await axios.get(`${uri}/api/client/${msg.from}`);
-            let neighborhoods;
+            
             //console.log("City: ", result.data.city)
 
             this.dataAux.forEach((element, index) => {
@@ -233,10 +244,10 @@ const menuSteps = [
                     //console.log(element.neighborhoods);
                 }
             });
-            this.dataAux = neighborhoods;
+
             msgAux = `✅\tSelecione Seu Bairro:\n\n`;
 
-            this.dataAux.forEach((element, index) => {
+            neighborhoods.forEach((element, index) => {
                 msgAux += `${index + 1} 👉 ${element.name}\n`;
             });
 
@@ -244,11 +255,11 @@ const menuSteps = [
         },
         msgConfirmation: async function (msg) {
             const index = parseInt(msg.body) - 1;
-            const select = this.dataAux[index];
+            const select = neighborhoods[index];
             await axios.put(`${uri}/api/client/${msg.from}`, {
                 bairro: select.name
             });
-            return msgAux = `✅\tCidade:\n\t${select.name}\n\n${menuOptions}​`;
+            return msgAux = `✅\tBairro:\n\t${select.name}\n\n${menuOptions}​`;
         },
         volver: async function (msg) { await volver(msg) },
         next: async function (msg) { await next(msg) },
@@ -561,7 +572,7 @@ const menuSteps = [
                         \nAvisaremos quando o pedido sair pra entrega 🛵
                         \n
                         \n\t\t${end_atendiment}​`
-            
+
 
             //await ClientZap.deleteOne({ phone: msg.from });
 
@@ -603,6 +614,7 @@ const menuSteps = [
 ];
 
 async function getData(msg) {
+
     await axios.get(`${uri}/api/cities/${msg.userId}`, // URL
         { // Configurações (headers, etc)
             headers: {
@@ -639,71 +651,66 @@ async function getData(msg) {
 }
 // Função principal para executar o menu dinâmico
 async function runDynamicMenu(msg) {
+    // buscar dados de cliente
     try {
-        // buscar dados de cliente
-        try {
-            const clientResult = await axios.get(`${uri}/api/client/${msg.from}`);
-            if (clientResult.status === 200) {
-                if (menuSteps[clientResult.data.etapa].validate(msg)) {
-                    // Verificação se entrada é válida para confimação
+        const clientResult = await axios.get(`${uri}/api/client/${msg.from}`);
+        if (clientResult.status === 200) {
+            if (menuSteps[clientResult.data.etapa].validate(msg)) {
+                // Verificação se entrada é válida para confimação
 
-                    return await menuSteps[clientResult.data.etapa].msgConfirmation(msg);
-                } else if (msg.body === "B" || msg.body === "b") {
-                    // msg de opções da etapa anterior
-                    if ((clientResult.data.etapa - 1) > 0) {
-                        // voltar
-                        await menuSteps[clientResult.data.etapa].volver(msg);
-                        return await menuSteps[clientResult.data.etapa - 1].msgOption(msg);
-                    } else {
-                        return await menuSteps[clientResult.data.etapa].msgOption(msg);
-                    }
-                } else if (msg.body === "A" || msg.body === "a") {
-                    // Incrementa etapa
-                    await menuSteps[clientResult.data.etapa].next(msg);
-                    // msg de opções da proxima etapa
-                    if (clientResult.data.etapa < 6 || clientResult.data.orders.length > 0) {
-                        return await menuSteps[clientResult.data.etapa + 1].msgOption(msg);
-                    } else {
-                        return msg_orders_void;
-                    }
-                } else if (msg.body === "O" || msg.body === "o") {
-                    // Edição
-                    return await menuSteps[clientResult.data.etapa].edit(msg);
-                } else if (msg.body === "X" || msg.body === "x") {
-                    // Sair
-                    return await menuSteps[clientResult.data.etapa].exit(msg);
+                return await menuSteps[clientResult.data.etapa].msgConfirmation(msg);
+            } else if (msg.body === "B" || msg.body === "b") {
+                // msg de opções da etapa anterior
+                if ((clientResult.data.etapa - 1) > 0) {
+                    // voltar
+                    await menuSteps[clientResult.data.etapa].volver(msg);
+                    return await menuSteps[clientResult.data.etapa - 1].msgOption(msg);
                 } else {
-                    // Opção Invalida
-                    return option_inval;
+                    return await menuSteps[clientResult.data.etapa].msgOption(msg);
                 }
-            }
-        } catch (error) {
-            // Tratamento de erros
-            if (error.response) {
-                // O servidor respondeu com um status diferente de 2xx
-                const { status, data } = error.response;
-                if (status === 404) {
-                    // Cadastro de cliente
-                    console.log(data);
-                    return await menuSteps[0].msgOption(msg);
-                } else if (status === 500) {
-                    return "runDynamicMenu: Erro interno no servidor da API";
+            } else if (msg.body === "A" || msg.body === "a") {
+                // Incrementa etapa
+                await menuSteps[clientResult.data.etapa].next(msg);
+                // msg de opções da proxima etapa
+                if (clientResult.data.etapa < 6 || clientResult.data.orders.length > 0) {
+                    return await menuSteps[clientResult.data.etapa + 1].msgOption(msg);
                 } else {
-                    return `runDynamicMenu: Erro desconhecido na API (Status: ${status})`;
+                    return msg_orders_void;
                 }
-            } else if (error.request) {
-                // A requisição foi feita, mas não houve resposta do servidor
-                console.error("runDynamicMenu: Nenhuma resposta recebida do servidor:");
-                return "runDynamicMenu: Falha ao conectar com o servidor da API";
+            } else if (msg.body === "O" || msg.body === "o") {
+                // Edição
+                return await menuSteps[clientResult.data.etapa].edit(msg);
+            } else if (msg.body === "X" || msg.body === "x") {
+                // Sair
+                return await menuSteps[clientResult.data.etapa].exit(msg);
             } else {
-                // Outros erros (ex.: problemas de configuração)
-                console.error("runDynamicMenu: Erro ao fazer a requisição:", error.message);
-                return "runDynamicMenu: Erro ao acessar a API";
+                // Opção Invalida
+                return option_inval;
             }
         }
     } catch (error) {
-        console.error('runDynamicMenu: Erro:');
-        process.exit(1);
+        // Tratamento de erros
+        if (error.response) {
+            // O servidor respondeu com um status diferente de 2xx
+            const { status, data } = error.response;
+            if (status === 404) {
+                // Cadastro de cliente
+                console.log(data);
+                return await menuSteps[0].msgOption(msg);
+            } else if (status === 500) {
+                return "runDynamicMenu: Erro interno no servidor da API";
+            } else {
+                return `runDynamicMenu: Erro desconhecido na API (Status: ${status})`;
+            }
+        } else if (error.request) {
+            // A requisição foi feita, mas não houve resposta do servidor
+            console.error("runDynamicMenu: Nenhuma resposta recebida do servidor:");
+            return "runDynamicMenu: Falha ao conectar com o servidor da API";
+        } else {
+            // Outros erros (ex.: problemas de configuração)
+            console.error("runDynamicMenu: Erro ao fazer a requisição:", error);
+            return "runDynamicMenu: Erro ao acessar a API";
+        }
     }
 }
 

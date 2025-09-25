@@ -78,6 +78,7 @@ async function startClient() {
         states.conectado = true;
         states.imageData = null;
         sendStates();
+
     });
 
     client.on('authenticated', () => {
@@ -100,7 +101,9 @@ async function startClient() {
         sendStates();
     });
 
-    client.on('message', (msg) => handleMessage(client, msg));
+    client.on('message', (msg) => {
+        handleMessage(client, msg);
+    });
 
     try {
         await client.initialize();

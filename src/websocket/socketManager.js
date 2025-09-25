@@ -30,14 +30,19 @@ function initSocket() {
     socket.on('atualizacao', async (data) => {
         if (data.userId !== env.USERID) return;
 
-        if (data.type === 'getStates' && typeof onGetStatesCallback === 'function') {
+        if (data.type === 'getStates') {
             console.log('💬 Comando getStates:');
-            onGetStatesCallback();
+            //onGetStatesCallback();
         }
 
-        if (data.type === 'setbotState' && typeof onSetBotStateCallback === 'function') {
+        if (data.type === 'setbotState') {
+
             console.log('🤖 Comando botState:', data.botActiveState ? 'ON' : 'OFF', "Tipo do Bot:", data.botAIState ? 'IA' : 'MENU');
-            onSetBotStateCallback(data.botActiveState, data.botAIState);
+
+            // ✅ Atribui os valores recebidos
+            states.botActiveState = !data.botActiveState;
+            states.botAIState = data.botAIState;
+            data.botActiveState = true;
         }
     });
 

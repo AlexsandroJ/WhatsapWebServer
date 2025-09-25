@@ -2,7 +2,7 @@
 
 let serverState = false;
 let clientState = false;
-let botActiveState = true;
+let botActiveState = false;
 let botAIState = false;
 let conectado = false;
 let imageData = null;
