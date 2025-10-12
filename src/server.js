@@ -13,13 +13,15 @@ startClient();
 
 // Trata encerramento limpo
 process.on('SIGINT', async () => {
-    console.log("\n🛑 Encerrando servidor...");
+    //await axios.patch(`${uri}/api/activate-tenant/${userId}`,{status: "deleted"});
+    
+    
     states.serverState = false;
     states.clientState = false;
     states.resetImageData();
     sendStates();
+    console.log("\n🛑 Encerrando servidor...");
     await destroyClient();
-
     console.log("✅ Servidor encerrado com sucesso.");
     process.exit(0);
 });

@@ -7,6 +7,28 @@ let socket = null;
 let onGetStatesCallback = null; // ← Callback para getStates
 let onSetBotStateCallback = null; // ← Callback para setbotState
 
+function sendStates() {
+
+    const socket = getSocket();
+    if (!socket || !socket.connected) {
+        console.warn('🟡 Não foi possível enviar estados - socket desconectado');
+        return;
+    }
+
+    socket.emit('atualizacao', {
+        type: 'conected',
+        token: process.env.TOKEN || "",
+        userId: process.env.USERID || "",
+        serverState: states.serverState,
+        clientState: states.clientState,
+        conectado: states.conectado,
+        botActiveState: states.botActiveState,
+        botAIState: states.botAIState,
+        imageData: states.imageData
+    });
+
+}
+
 function initSocket() {
     socket = io(env.API_URL, {
         reconnection: true,
@@ -30,9 +52,14 @@ function initSocket() {
     socket.on('atualizacao', async (data) => {
         if (data.userId !== env.USERID) return;
 
+        if( data.type === 'system'){
+            states.clientState = data.clientState;
+            sendStates();
+        }
+
         if (data.type === 'getStates') {
             console.log('💬 Comando getStates:');
-            //onGetStatesCallback();
+            sendStates();
         }
 
         if (data.type === 'setbotState') {
@@ -40,9 +67,21 @@ function initSocket() {
             console.log('🤖 Comando botState:', data.botActiveState ? 'ON' : 'OFF', "Tipo do Bot:", data.botAIState ? 'IA' : 'MENU');
 
             // ✅ Atribui os valores recebidos
-            states.botActiveState = !data.botActiveState;
+            states.botActiveState = data.botActiveState;
             states.botAIState = data.botAIState;
-            data.botActiveState = true;
+            sendStates();
+            
+        }
+
+        if (data.type === 'setbotState') {
+
+            console.log('🤖 Comando Reset:', data.botActiveState ? 'ON' : 'OFF', "Tipo do Bot:", data.botAIState ? 'IA' : 'MENU');
+
+            // ✅ Atribui os valores recebidos
+            states.botActiveState = data.botActiveState;
+            states.botAIState = data.botAIState;
+            sendStates();
+            
         }
     });
 
@@ -62,4 +101,4 @@ function onSetBotState(callback) {
     onSetBotStateCallback = callback;
 }
 
-module.exports = { initSocket, getSocket, onGetStates, onSetBotState };
+module.exports = { initSocket, sendStates, getSocket, onGetStates, onSetBotState };

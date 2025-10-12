@@ -1,43 +1,28 @@
 // src/whatsapp/clientManager.js
-const { Client , LocalAuth} = require("whatsapp-web.js");
+const { Client, LocalAuth } = require("whatsapp-web.js");
+const axios = require('axios');
 const QRCode = require('qrcode');
 const qrcodeTerminal = require('qrcode-terminal');
 const states = require('../util/states');
 const { handleMessage } = require('./messageHandler');
-const { getSocket } = require('../websocket/socketManager');
+const { getSocket, sendStates } = require('../websocket/socketManager');
 const { temClienteSalvo } = require('../util/helpers');
+const { stat } = require("fs");
 
 let client = null;
+const uri = `${process.env.API_URL}`;
 
-function sendStates() {
-
-    const socket = getSocket();
-    if (!socket || !socket.connected) {
-        console.warn('🟡 Não foi possível enviar estados - socket desconectado');
-        return;
-    }
+let token = process.env.TOKEN || "";
+let userId = process.env.USERID || "";
 
 
-    socket.emit('atualizacao', {
-        type: 'conected',
-        token: process.env.TOKEN || "",
-        userId: process.env.USERID || "",
-        serverState: states.serverState,
-        clientState: states.clientState,
-        conectado: states.conectado,
-        botActiveState: states.botActiveState,
-        botAIState: states.botAIState,
-        imageData: states.imageData
-    });
-
-}
 
 async function startClient() {
     if (client) {
         console.warn('⚠️ Cliente já existe. Destruindo antes de reiniciar...');
         await destroyClient();
     } else {
-        console.log('✅ Criando novo cliente WhatsApp...');
+        console.log('✅ Criando/Carregando cliente WhatsApp...');
         client = new Client({
             puppeteer: {
                 args: ['--no-sandbox', '--disable-setuid-sandbox'],
@@ -65,7 +50,7 @@ async function startClient() {
             states.conectado = false;
             sendStates();
             qrcodeTerminal.generate(qr, { small: true });
-            console.log('✅ QR Code gerado e enviado via WebSocket');
+            console.log('✅ QR Code gerado e enviado via WebSocket/Terminal');
 
         } catch (error) {
             console.error("❌ Erro ao gerar QR Code:", error.message);
@@ -78,7 +63,6 @@ async function startClient() {
         states.conectado = true;
         states.imageData = null;
         sendStates();
-
     });
 
     client.on('authenticated', () => {
@@ -108,10 +92,15 @@ async function startClient() {
     try {
         await client.initialize();
         console.log('✅ Inicializado cliente WhatsApp');
+        // Ativa o tenant se houver cliente salvo
+
+        //await axios.patch(`${uri}/api/activate-tenant/${userId}`,{status: "active"});
         states.clientState = true;
+        sendStates();
     } catch (err) {
         console.error('❌ Falha ao inicializar cliente:', err.message);
         states.clientState = false;
+        sendStates();
     }
 }
 
@@ -120,6 +109,7 @@ async function destroyClient() {
     try {
         await client.destroy();
         console.log('✅ Cliente destruído com sucesso.');
+        sendStates();
     } catch (err) {
         console.warn('⚠️ Erro ao destruir cliente:', err.message);
     } finally {
