@@ -311,10 +311,9 @@ describe('Testando erros', () => {
     it('Etapa=2 teste do X exit e exclusão', async () => {
         const msg = { from: phoneForTest, body: 'X', userId: userId, token: token };
         const response = await dataMenu(msg);
-        console.log(response);
 
         try {
-            const response = await axios.get(`${uri}/api/client/${msg.from}`);
+            const respo = await axios.get(`${uri}/api/client/${msg.from}`);
             // Se chegou aqui, a API NÃO retornou 404 → falha o teste
             expect(true).toBe(false); // força falha
         } catch (error) {
