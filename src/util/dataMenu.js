@@ -45,7 +45,7 @@ const exitt = `❌ sair​`;
 const menuOptions = `${returne}​\n${edition}​\n${confirmation}\n${exitt}\n`;
 
 const money_type = "✅\tQual a forma de pagamento \n\n1️⃣Dinheiro\n2️⃣Cartão 💳\n3️⃣Pix";
-const option_inval = `❌​\tOpção invalida`;
+const option_inval = `❌​\tOpção invalida x para sair`;
 const personal_service = `\t💬 Aguarde um de nossos atendentes\n\n${returne}`;
 
 const msg_orders_void = `❌\t​Pedidos Vazios\n\nEncerrar Atendimento ?\n\n${returne}​\n${exitt}\n`;
@@ -316,7 +316,7 @@ const menuSteps = [
                 rua: msg.body,
                 frete: frete
             });
-            return msgAux = `✅\t${msg.body}\n\n${menuOptions}​`;
+            return msgAux = `✅\tRua:\n\t${msg.body}\n\n${menuOptions}​`;
         },
         volver: async function (msg) { await volver(msg) },
         next: async function (msg) { await next(msg) },
@@ -733,7 +733,7 @@ async function runDynamicMenu(msg) {
 
         } else {
             console.error("Erro na configuração da requisição:", error.message);
-            return "Erro interno no bot. Estamos verificando o problema.";
+            return "Erro interno no bot. Estamos verificando o problema. digite x para reiniciar";
         }
 
         console.error("Erro desconhecido:", error);
