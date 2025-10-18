@@ -326,6 +326,7 @@ describe('Testando erros', () => {
 
 });
 
+
 describe('Testando Sequencia completa do Menu', () => {
 
     it('Mensagem boas vindas', async () => {

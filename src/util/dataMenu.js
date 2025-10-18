@@ -122,6 +122,7 @@ function edit(msg) {
 async function exit(msg) {
     try {
         await axios.delete(`${uri}/api/client/${msg.from}`);
+        return `✅​\tAtendimento Encerrado\n\n​👍​\t${despedida}`;
     } catch (error) {
         // Tratamento de erros
         if (error.response) {
@@ -159,17 +160,17 @@ const menuSteps = [
             let client;
             try {
                 const response = await axios.get(`${uri}/api/client/${msg.from}`);
-                client = response.data;
-                console.log(`Cliente já existe: ${client.phone}`);
+                //client = response.data;
+                //console.debug(`Cliente já existe: ${client.phone}`);
             } catch (error) {
                 // Se for 404, significa que NÃO existe → vamos cadastrar
                 if (error.response?.status === 404) {
-                    //console.log(`Cliente não encontrado. Cadastrando...`);
+                    //console.debug(`Cliente não encontrado. Cadastrando...`);
                     const createResponse = await axios.post(`${uri}/api/client/`, {
                         phone: msg.from
                     });
                     client = createResponse.data;
-                    console.log(`Novo cliente cadastrado: ${client.phone}`);
+                    console.debug(`Novo cliente cadastrado: ${client.phone}`);
                 } else {
                     // Outro erro (500, timeout, etc.)
                     throw error; // relança para o catch externo
@@ -234,7 +235,7 @@ const menuSteps = [
         getData: async function (msg) { },
         msgOption: async function (msg) {
             const result = await axios.get(`${uri}/api/client/${msg.from}`);
-            
+
             //console.log("City: ", result.data.city)
 
             this.dataAux.forEach((element, index) => {
@@ -622,6 +623,11 @@ async function getData(msg) {
             }
         }).
         then(res => {
+
+            menuSteps[0].dataAux = []; // limpar array
+            menuSteps[1].dataAux = []; // limpar array
+            menuSteps[2].dataAux = []; // limpar array
+
             res.data.cities.forEach(citys => {
                 // salvar em todas as etapas que precisam de cidades
                 menuSteps[0].dataAux.push(citys);
@@ -661,7 +667,7 @@ async function runDynamicMenu(msg) {
                 return await menuSteps[clientResult.data.etapa].msgConfirmation(msg);
             } else if (msg.body === "B" || msg.body === "b") {
                 // msg de opções da etapa anterior
-                if ((clientResult.data.etapa - 1) > 0) {
+                if ((clientResult.data.etapa - 1) >= 0) {
                     // voltar
                     await menuSteps[clientResult.data.etapa].volver(msg);
                     return await menuSteps[clientResult.data.etapa - 1].msgOption(msg);
@@ -682,7 +688,7 @@ async function runDynamicMenu(msg) {
                 return await menuSteps[clientResult.data.etapa].edit(msg);
             } else if (msg.body === "X" || msg.body === "x") {
                 // Sair
-                return await menuSteps[clientResult.data.etapa].exit(msg);
+                return await exit(msg);
             } else {
                 // Opção Invalida
                 return option_inval;
@@ -690,27 +696,48 @@ async function runDynamicMenu(msg) {
         }
     } catch (error) {
         // Tratamento de erros
+
+        //console.debug("Erro em runDynamicMenu:", error.message);
+
         if (error.response) {
-            // O servidor respondeu com um status diferente de 2xx
-            const { status, data } = error.response;
+            const { status } = error.response;
+
             if (status === 404) {
-                // Cadastro de cliente
-                console.log(data);
+                //console.debug("Cliente não encontrado. Iniciando etapa de cadastro.", { from: msg.from });
+                if (!menuSteps?.[0]?.msgOption) {
+                    return "Erro ao iniciar o menu. Contate o suporte.";
+                }
                 return await menuSteps[0].msgOption(msg);
-            } else if (status === 500) {
-                return "runDynamicMenu: Erro interno no servidor da API";
-            } else {
-                return `runDynamicMenu: Erro desconhecido na API (Status: ${status})`;
             }
+
+            if (status === 401 || status === 403) {
+                return "Sessão inválida. Por favor, inicie uma nova conversa.";
+            }
+
+            if (status === 429) {
+                return "Muitas requisições. Aguarde e tente novamente.";
+            }
+
+            if (status >= 500) {
+                console.error("Erro 5xx na API:", { status, from: msg.from });
+                return "Estamos com instabilidade. Tente novamente mais tarde.";
+            }
+
+            // Outros erros 4xx
+            console.warn("Erro 4xx na API:", { status, from: msg.from });
+            return "Não foi possível processar sua solicitação.";
+
         } else if (error.request) {
-            // A requisição foi feita, mas não houve resposta do servidor
-            console.error("runDynamicMenu: Nenhuma resposta recebida do servidor:");
-            return "runDynamicMenu: Falha ao conectar com o servidor da API";
+            console.error("Sem resposta do servidor:", { from: msg.from });
+            return "Não foi possível conectar ao sistema. Verifique sua rede e tente novamente.";
+
         } else {
-            // Outros erros (ex.: problemas de configuração)
-            console.error("runDynamicMenu: Erro ao fazer a requisição:", error);
-            return "runDynamicMenu: Erro ao acessar a API";
+            console.error("Erro na configuração da requisição:", error.message);
+            return "Erro interno no bot. Estamos verificando o problema.";
         }
+
+        console.error("Erro desconhecido:", error);
+        return "Erro desconhecido. Tente novamente mais tarde.";
     }
 }
 
